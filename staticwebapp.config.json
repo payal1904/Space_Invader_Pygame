@@ -1,0 +1,6 @@
+{
+  "mimeTypes": {
+    ".wasm": "application/wasm",
+    ".apk": "application/octet-stream"
+  }
+}

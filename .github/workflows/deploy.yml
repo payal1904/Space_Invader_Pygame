@@ -1,0 +1,116 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: space_invader_windows.exe
+            bin: dist/space_invader.exe
+          - os: macos-latest
+            artifact: space_invader_macos
+            bin: dist/space_invader
+          - os: ubuntu-latest
+            artifact: space_invader_linux
+            bin: dist/space_invader
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Build executable
+        run: uv run pyinstaller space_invader.spec
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.bin }}
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Package artifacts for release
+        run: |
+          cp artifacts/space_invader_windows.exe/space_invader.exe space_invader_windows.exe
+          chmod +x artifacts/space_invader_macos/space_invader
+          zip space_invader_macos.zip -j artifacts/space_invader_macos/space_invader
+          chmod +x artifacts/space_invader_linux/space_invader
+          zip space_invader_linux.zip -j artifacts/space_invader_linux/space_invader
+
+      - name: Create or update latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit latest \
+            --title "Latest Build" \
+            --notes "Auto-built from the latest commit on main." 2>/dev/null || \
+          gh release create latest \
+            --title "Latest Build" \
+            --notes "Auto-built from the latest commit on main."
+
+          gh release upload latest \
+            space_invader_windows.exe \
+            space_invader_macos.zip \
+            space_invader_linux.zip \
+            --clobber
+
+  deploy:
+    name: Deploy Landing Page
+    needs: release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: landing
+          skip_app_build: true
+
+  close_pull_request:
+    name: Close Pull Request Environment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    steps:
+      - name: Close Pull Request
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: close
