@@ -8,14 +8,14 @@ A classic Space Invaders game built with Python and Pygame.
 
 ## Team
 
-| Name | Student ID |
-|------|------------|
-| Ami Valand | C0956779 |
-| Nikita Nikita | C0958762 |
-| Deadeepya Koganti | C0959068 |
-| Qi Chen | C0944666 |
-| Anmol Kaur | C0949650 |
-| Payal Patel | C0959412 |
+| Name | Student ID | Contribution |
+|------|------------|--------------|
+| Ami Valand | C0956779 | Game Scoring System Development |
+| Nikita Nikita | C0958762 |  Power-up Feature Implementation |
+| Deadeepya Koganti | C0959068 | Presentation Design and Documentation |
+| Qi Chen | C0944666 | Azure Development & Configuration |
+| Anmol Kaur | C0949650 | Documentation and CI/CD |
+| Payal Patel | C0959412 | User Login Functionality and Manage GitHub Repo |
 
 ## Gameplay
 
